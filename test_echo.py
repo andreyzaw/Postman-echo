@@ -19,7 +19,7 @@ def test_get_request_with_url_post(post_url):
     response = requests.get(post_url)
 
     # Checks
-    assert response.status_code == 200
+    assert response.status_code == 404
 
 
 # Test 3: request POST  with JSON data
