@@ -92,7 +92,7 @@ def test_post_with_custom_headers(post_url, sample_user):
     )
 
     # Checks
-    assert response.status_code == 400
+    assert response.status_code == 200
     response_data = response.json()
 
     # We check that the data was returned in the response.
