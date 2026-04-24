@@ -15,12 +15,36 @@ jobs:
       id-token: write
       contents: write
 
+    # ⭐ ЭТО КЛЮЧЕВАЯ ЧАСТЬ - добавляем environment ⭐
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v5
         with:
           ref: gh-pages
           path: gh-pages
+          fail-if-not-exists: false
+
+      - name: Create gh-pages branch if not exists
+        run: |
+          if [ ! -d gh-pages/.git ]; then
+            git clone --depth 1 https://github.com/${{ github.repository }} temp-repo
+            cd temp-repo
+            git checkout --orphan gh-pages
+            git rm -rf .
+            echo "<html><body><h1>Allure Reports</h1><p>Reports will appear here</p></body></html>" > index.html
+            git add index.html
+            git config user.email "actions@github.com"
+            git config user.name "GitHub Actions"
+            git commit -m "Initial gh-pages branch"
+            git push origin gh-pages
+            cd ..
+            rm -rf temp-repo
+            git clone --depth 1 --branch gh-pages https://github.com/${{ github.repository }} gh-pages
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -40,4 +64,5 @@ jobs:
           path: gh-pages
 
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v5
+        id: deployment
+        uses: actions/deploy-pages@v4
