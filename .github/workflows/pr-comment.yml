@@ -1,0 +1,96 @@
+name: PR Allure Report Comment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test-and-comment:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Allure
+        run: |
+          sudo apt-add-repository ppa:qameta/allure -y
+          sudo apt-get update
+          sudo apt-get install allure -y
+
+      - name: Run tests with Allure
+        id: tests
+        continue-on-error: true
+        run: |
+          pytest test_echo.py --alluredir=allure-results --clean-alluredir
+
+      - name: Generate Allure Report
+        run: |
+          allure generate allure-results -o allure-report --clean
+
+      - name: Get test summary
+        id: summary
+        run: |
+          # Extract test summary from pytest output
+          TOTAL=$(grep -oP '=\s+\K\d+' allure-results/* | head -1 || echo "0")
+          PASSED=$(grep -oP 'passed=\K\d+' allure-results/* | head -1 || echo "0")
+          FAILED=$(grep -oP 'failed=\K\d+' allure-results/* | head -1 || echo "0")
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-pr-${{ github.event.pull_request.number }}
+          path: allure-report
+          retention-days: 7
+
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `## 🧪 Allure Test Results
+            
+            ### 📊 Test Summary
+            - **Total Tests:** ${{ steps.summary.outputs.total }}
+            - **✅ Passed:** ${{ steps.summary.outputs.passed }}
+            - **❌ Failed:** ${{ steps.summary.outputs.failed }}
+            
+            ### 📎 Artifacts
+            The Allure report has been generated and attached to this workflow run.
+            
+            ### 🔍 Detailed Report
+            To view the detailed Allure report:
+            1. Go to the **Actions** tab
+            2. Select this workflow run
+            3. Download the **allure-report-pr-${{ github.event.pull_request.number }}** artifact
+            4. Extract and open \`index.html\` in your browser
+            
+            ---
+            *Report generated automatically by GitHub Actions*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+      - name: Fail if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

@@ -1,0 +1,43 @@
+name: Deploy Allure Report to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: ["Test and Publish Allure Report"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Create index.html if not exists
+        run: |
+          if [ ! -f gh-pages/index.html ]; then
+            echo "<html><head><title>Allure Reports</title></head><body>" > gh-pages/index.html
+            echo "<h1>Allure Test Reports</h1>" >> gh-pages/index.html
+            echo "<p><a href='./'>Latest Report</a></p>" >> gh-pages/index.html
+            echo "</body></html>" >> gh-pages/index.html
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh-pages
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
