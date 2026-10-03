@@ -1,0 +1,1 @@
+{"total":2,"items":[{"uid":"076f6dc495dddc51d7e30fd6edc2032e","name":"POST запросы","statistic":{"failed":0,"broken":0,"skipped":0,"passed":4,"unknown":0,"total":4}},{"uid":"5c84aa502b9ff796e9033d22300a4717","name":"GET запросы","statistic":{"failed":0,"broken":0,"skipped":0,"passed":2,"unknown":0,"total":2}}]}
